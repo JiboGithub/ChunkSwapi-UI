@@ -4,22 +4,80 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import { textCase } from "../utils/formatter";
 import ButtonLoader from "./ButtonLoader";
-import { BiSearch } from "react-icons/bi";
+import { BiSearch, BiErrorCircle } from "react-icons/bi";
 
 const LandingPage = () => {
   const [activeTab, setActiveTab] = useState("Jokes");
   const [loading, setLoading] = useState(true);
   const [loadingPeople, setLoadingPeople] = useState(true);
-
+  const [searchLoading, setSearchLoading] = useState(false);
   const [allCategories, setAllCategories] = useState([]);
   const [allPeople, setAllPeople] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [error, setError] = useState(false);
+  const [errorPeople, setErrorPeople] = useState(false);
+  const [run, setRun] = useState(false);
 
   const inputRef = useRef();
 
+  const config = {
+    headers: {
+      "Content-type": "application/json; charset=UTF-8",
+    },
+  };
+
+  const fetchData = () => {
+    const url = "http://chuckswapi.somee.com/publish/chuck/categories";
+    const urlPeople = "http://chuckswapi.somee.com/publish/swapi/people";
+    axios
+      .get(url, config)
+      .then((res) => {
+        setError(false);
+        setLoading(false);
+        setAllCategories(res.data);
+      })
+      .catch((err) => {
+        setError(true);
+        setLoading(false);
+      });
+    axios
+      .get(urlPeople, config)
+      .then((res) => {
+        setErrorPeople(false);
+        setLoadingPeople(false);
+        setAllPeople(res.data.results);
+      })
+      .catch((err) => {
+        setErrorPeople(true);
+        setLoadingPeople(false);
+      });
+  };
+
   const handleSearch = async (term) => {
-    console.log(term);
+    setSearchLoading(true);
     setSearchTerm(term);
+    if (term.trim()) {
+      const searchEndPoint = `http://chuckswapi.somee.com/publish/search?query=${term.trim()}`;
+      await axios
+        .get(searchEndPoint, config)
+        .then((res) => {
+          console.log("response data", res);
+          setAllPeople(res?.data[0].data?.results);
+          setSearchLoading(false);
+        })
+        .catch((err) => {
+          setSearchLoading(false);
+        });
+      const filterArray = allCategories?.filter((cat) =>
+        cat.includes(term.trim())
+      );
+      setAllCategories(filterArray);
+    }
+    if (!term.trim()) {
+      fetchData();
+      setSearchLoading(false);
+      setRun(true);
+    }
   };
 
   const handleFilter = (text) => {
@@ -27,33 +85,8 @@ const LandingPage = () => {
   };
 
   useEffect(() => {
-    const config = {
-      headers: {
-        "Content-type": "application/json; charset=UTF-8",
-      },
-    };
-    const url = "https://api.chucknorris.io/jokes/categories";
-    const urlPeople = "https://swapi.dev/api/people";
-    axios
-      .get(url, config)
-      .then((res) => {
-        setLoading(false);
-        setAllCategories(res.data);
-      })
-      .catch((err) => {
-        setLoading(false);
-      });
-    axios
-      .get(urlPeople, config)
-      .then((res) => {
-        console.log("responsepeople", res);
-        setLoadingPeople(false);
-        setAllPeople(res.data.results);
-      })
-      .catch((err) => {
-        setLoadingPeople(false);
-      });
-  }, []);
+    fetchData();
+  }, [run]);
 
   return (
     <div>
@@ -100,27 +133,51 @@ const LandingPage = () => {
                 type="search"
                 ref={inputRef}
                 value={searchTerm}
+                style={{ border: "1px solid #FFF" }}
                 onChange={(e) => handleSearch(e.target.value)}
-                className="ms-2 bg-white visitors-search-input"
+                className="ms-2 bg-white visitors-search-input w-100"
                 placeholder="Search"
               />
             </Col>
           </Row>
         </div>
-        {/* Page for All Jokes */}
+
+        {searchLoading && (
+          <div
+            className="text-center d-flex justify-content-center align-items-center"
+            style={{ height: "60vh" }}
+          >
+            {" "}
+            <ButtonLoader />
+          </div>
+        )}
+
         {activeTab === "Jokes" && (
           <Row>
             {loading && (
               <div
                 className="text-center d-flex justify-content-center align-items-center"
-                style={{ height: "100vh" }}
+                style={{ height: "60vh" }}
               >
                 {" "}
                 <ButtonLoader />
               </div>
             )}
+            {error && (
+              <div
+                className="text-center d-flex justify-content-center align-items-center"
+                style={{ height: "60vh" }}
+              >
+                <BiErrorCircle
+                  className="text-danger"
+                  style={{ fontSize: "60px" }}
+                />
+                <div>Error loading your data</div>
+              </div>
+            )}
             {allCategories &&
               allCategories.length > 0 &&
+              !searchLoading &&
               allCategories.map((cat, index) => (
                 <Col xs={12} md={4} className="categories-card " key={index}>
                   <Link to={`/categories/${cat}`}>
@@ -141,14 +198,27 @@ const LandingPage = () => {
             {loadingPeople && (
               <div
                 className="text-center d-flex justify-content-center align-items-center"
-                style={{ height: "100vh" }}
+                style={{ height: "60vh" }}
               >
                 {" "}
                 <ButtonLoader />
               </div>
             )}
+            {errorPeople && (
+              <div
+                className="text-center d-flex justify-content-center align-items-center"
+                style={{ height: "60vh" }}
+              >
+                <BiErrorCircle
+                  className="text-danger"
+                  style={{ fontSize: "60px" }}
+                />
+                <div>Error loading your data</div>
+              </div>
+            )}
             {allPeople &&
               allPeople.length > 0 &&
+              !searchLoading &&
               allPeople.map((person, index) => (
                 <Col xs={12} md={4} className="categories-card " key={index}>
                   <div className="p-2 p-md-3 shadow rounded my-2 pointer bg-white d-flex flex-column">
@@ -164,7 +234,7 @@ const LandingPage = () => {
                     <div className="mt-2">
                       <span className="text-danger font700 font16">Films</span>
                       {person?.films?.map((link, index) => (
-                        <div>
+                        <div key={index}>
                           <a href={link} target="_blank" rel="noreferrer">
                             Film - {index + 1}
                           </a>
@@ -182,7 +252,7 @@ const LandingPage = () => {
                         </span>
                       )}
                       {person?.starships?.map((link, index) => (
-                        <div>
+                        <div key={index}>
                           <a href={link} target="_blank" rel="noreferrer">
                             Ship - {index + 1}
                           </a>
@@ -200,7 +270,7 @@ const LandingPage = () => {
                         </span>
                       )}
                       {person?.vehicles?.map((link, index) => (
-                        <div>
+                        <div key={index}>
                           <a href={link} target="_blank" rel="noreferrer">
                             Vehicle - {index + 1}
                           </a>

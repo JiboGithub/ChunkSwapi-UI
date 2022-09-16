@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import axios from "axios";
 import ButtonLoader from "./ButtonLoader";
 import { textCase } from "../utils/formatter";
@@ -21,7 +21,7 @@ const CategoryDetails = () => {
         "Content-type": "application/json; charset=UTF-8",
       },
     };
-    const url = `https://api.chucknorris.io/jokes/random?category=${category}`;
+    const url = `http://chuckswapi.somee.com/publish/jokes/random?category=${category}`;
     axios
       .get(url, config)
       .then((res) => {
@@ -33,7 +33,7 @@ const CategoryDetails = () => {
         console.log(err);
         setLoading(false);
       });
-  }, []);
+  }, [category]);
   return (
     <div className="py-2 py-md-3">
       {loading && (
